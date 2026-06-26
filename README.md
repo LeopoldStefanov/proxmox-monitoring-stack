@@ -149,7 +149,7 @@ proxmox-nodes (systemd services)
 
 ## Related
 
-- [megaraid-prometheus-exporter](https://github.com/YOUR_USERNAME/megaraid-prometheus-exporter) — textfile collector for drives behind a MegaRAID controller
+- [megaraid-prometheus-exporter](https://github.com/LeopoldStefanov/megaraid-prometheus-exporter) — textfile collector for drives behind a MegaRAID controller
 
 ---
 
