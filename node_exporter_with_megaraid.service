@@ -1,0 +1,25 @@
+# Use this variant on nodes with a MegaRAID controller
+# Requires megaraid-prometheus-exporter cron job to be set up
+# See: https://github.com/YOUR_USERNAME/megaraid-prometheus-exporter
+
+[Unit]
+Description=Prometheus Node Exporter
+After=network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/local/bin/node_exporter \
+  --collector.systemd \
+  --collector.cpu.info \
+  --collector.diskstats \
+  --collector.filesystem \
+  --collector.meminfo \
+  --collector.netstat \
+  --collector.thermal_zone \
+  --collector.textfile.directory=/var/lib/node_exporter/textfile_collector \
+  --web.listen-address=:9100
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

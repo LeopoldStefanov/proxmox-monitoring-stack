@@ -1,0 +1,13 @@
+[Unit]
+Description=Prometheus smartctl Exporter
+After=network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/local/bin/smartctl_exporter \
+  --web.listen-address=:9633
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

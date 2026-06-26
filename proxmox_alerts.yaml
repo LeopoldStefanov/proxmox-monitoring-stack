@@ -1,0 +1,456 @@
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: "Enterprise Proxmox Group"
+    folder: "Proxmox Alerts"
+    interval: "1m"
+    rules:
+      # ==========================================
+      # --- HYPERVISOR HOST LAYER ---
+      # ==========================================
+      - uid: "proxmox_node_down"
+        title: "Proxmox Node - Hypervisor Host Offline"
+        for: "1m"
+        noDataState: OK
+        labels:
+          severity: critical
+          dc: production
+        data:
+          - refId: "A"
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "YOUR_DATASOURCE_UID"
+            model:
+              expr: 'pve_up{id=~"node/.*"} == 0'
+              instant: true
+        condition: "A"
+        annotations:
+          description: "Proxmox node offline"
+
+      - uid: "proxmox_node_cpu_high"
+        title: "Proxmox Node - High CPU Usage (>85%)"
+        for: "5m"
+        noDataState: OK
+        labels:
+          severity: warning
+          dc: production
+        data:
+          - refId: "A"
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "YOUR_DATASOURCE_UID"
+            model:
+              expr: 'pve_cpu_usage_ratio{id=~"node/.*"} * 100 > 85'
+              instant: true
+        condition: "A"
+        annotations:
+          description: "CPU >85%"
+
+      - uid: "proxmox_node_ram_exhaustion"
+        title: "Proxmox Node - RAM Exhaustion (>92%)"
+        for: "5m"
+        noDataState: OK
+        labels:
+          severity: critical
+          dc: production
+        data:
+          - refId: "A"
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "YOUR_DATASOURCE_UID"
+            model:
+              expr: '(pve_memory_usage_bytes{id=~"node/.*"} / pve_memory_size_bytes{id=~"node/.*"}) * 100 > 92'
+              instant: true
+        condition: "A"
+        annotations:
+          description: "RAM >92%"
+
+      - uid: "proxmox_storage_low_space"
+        title: "Proxmox Storage - Pool Capacity Critical (>90%)"
+        for: "5m"
+        noDataState: OK
+        labels:
+          severity: critical
+          dc: production
+        data:
+          - refId: "A"
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "YOUR_DATASOURCE_UID"
+            model:
+              expr: '(pve_disk_usage_bytes{id=~"storage/.*"} / pve_disk_size_bytes{id=~"storage/.*"}) * 100 > 90'
+              instant: true
+        condition: "A"
+        annotations:
+          description: "Storage >90%"
+
+      # ==========================================
+      # --- VIRTUAL MACHINE GUEST LAYER ---
+      # ==========================================
+      - uid: "proxmox_vm_crash_shutdown"
+        title: "VM Guest - Shutdown or Crash Detected"
+        for: "2m"
+        noDataState: OK
+        labels:
+          severity: critical
+          dc: production
+        data:
+          - refId: "A"
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "YOUR_DATASOURCE_UID"
+            model:
+              expr: 'max by (id) (pve_up{id=~"(qemu|lxc)/.*"}) == 0'
+              instant: true
+        condition: "A"
+        annotations:
+          description: "VM stopped or crashed"
+
+      - uid: "proxmox_vm_cpu_redline"
+        title: "VM Guest - CPU Redlining (>90%)"
+        for: "5m"
+        noDataState: OK
+        labels:
+          severity: warning
+          dc: production
+        data:
+          - refId: "A"
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "YOUR_DATASOURCE_UID"
+            model:
+              expr: 'max by (id) (pve_cpu_usage_ratio{id=~"(qemu|lxc)/.*"}) * 100 > 90'
+              instant: true
+        condition: "A"
+        annotations:
+          description: "CPU >90%"
+
+      - uid: "proxmox_vm_ram_high"
+        title: "VM Guest - High Memory (>90%)"
+        for: "5m"
+        noDataState: OK
+        labels:
+          severity: warning
+          dc: production
+        data:
+          - refId: "A"
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "YOUR_DATASOURCE_UID"
+            model:
+              expr: 'max by (id) (pve_memory_usage_bytes{id=~"(qemu|lxc)/.*"} / pve_memory_size_bytes{id=~"(qemu|lxc)/.*"}) * 100 > 90'
+              instant: true
+        condition: "A"
+        annotations:
+          description: "Memory >90%"
+
+      # ==========================================
+      # --- DISK HEALTH (smartctl_exporter) ---
+      # ==========================================
+      - uid: "smart_disk_health"
+        title: "Proxmox Node - SMART Disk Failure Imminent"
+        for: "1m"
+        noDataState: OK
+        labels:
+          severity: critical
+          dc: production
+        data:
+          - refId: "A"
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "YOUR_DATASOURCE_UID"
+            model:
+              expr: 'smartctl_device_smart_healthy == 0'
+              instant: true
+        condition: "A"
+        annotations:
+          description: "SMART health failure — drive at risk of imminent failure"
+
+      - uid: "smart_reallocated_sectors"
+        title: "Proxmox Node - Reallocated Sectors Detected"
+        for: "5m"
+        noDataState: OK
+        labels:
+          severity: warning
+          dc: production
+        data:
+          - refId: "A"
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "YOUR_DATASOURCE_UID"
+            model:
+              expr: 'smartctl_device_attribute{attribute_name="Reallocated_Sector_Ct",attribute_value_type="raw"} > 0'
+              instant: true
+        condition: "A"
+        annotations:
+          description: "Drive has reallocated sectors — disk is degrading, schedule replacement"
+
+      - uid: "smart_ssd_wearout"
+        title: "Proxmox Node - NVMe/SSD Wearout Critical (>90%)"
+        for: "5m"
+        noDataState: OK
+        labels:
+          severity: critical
+          dc: production
+        data:
+          - refId: "A"
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "YOUR_DATASOURCE_UID"
+            model:
+              expr: 'smartctl_device_attribute{attribute_name="Media_Wearout_Indicator",attribute_value_type="raw"} < 10'
+              instant: true
+        condition: "A"
+        annotations:
+          description: "SSD has used >90% of rated write life — plan replacement soon"
+
+      - uid: "smart_disk_temp"
+        title: "Proxmox Node - Disk Temperature High (>55°C)"
+        for: "5m"
+        noDataState: OK
+        labels:
+          severity: warning
+          dc: production
+        data:
+          - refId: "A"
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "YOUR_DATASOURCE_UID"
+            model:
+              expr: 'smartctl_device_temperature > 55'
+              instant: true
+        condition: "A"
+        annotations:
+          description: "Disk temperature exceeds 55°C — check airflow/cooling"
+
+      # ==========================================
+      # --- NETWORK / BLACKBOX PROBES ---
+      # ==========================================
+      - uid: "blackbox_gateway_down"
+        title: "Gateway - ICMP Probe Failed"
+        for: "2m"
+        noDataState: OK
+        labels:
+          severity: critical
+          dc: production
+        data:
+          - refId: "A"
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "YOUR_DATASOURCE_UID"
+            model:
+              expr: 'probe_success{job="blackbox_ping"} == 0'
+              instant: true
+        condition: "A"
+        annotations:
+          description: "Gateway not responding to ICMP — possible network outage"
+
+      - uid: "blackbox_dns_fail"
+        title: "DNS Resolution Failure"
+        for: "2m"
+        noDataState: OK
+        labels:
+          severity: critical
+          dc: production
+        data:
+          - refId: "A"
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "YOUR_DATASOURCE_UID"
+            model:
+              expr: 'probe_success{job="blackbox_dns"} == 0'
+              instant: true
+        condition: "A"
+        annotations:
+          description: "DNS probe failing — possible internet or DNS outage"
+
+      - uid: "blackbox_tcp_fail"
+        title: "Gateway - TCP/443 Probe Failed"
+        for: "2m"
+        noDataState: OK
+        labels:
+          severity: warning
+          dc: production
+        data:
+          - refId: "A"
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "YOUR_DATASOURCE_UID"
+            model:
+              expr: 'probe_success{job="blackbox_tcp"} == 0'
+              instant: true
+        condition: "A"
+        annotations:
+          description: "TCP probe failing — HTTPS may be down"
+
+      # ==========================================
+      # --- NODE HARDWARE (node_exporter) ---
+      # ==========================================
+      - uid: "node_disk_space_critical"
+        title: "Proxmox Node - Root Disk Space Critical (<10%)"
+        for: "5m"
+        noDataState: OK
+        labels:
+          severity: critical
+          dc: production
+        data:
+          - refId: "A"
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "YOUR_DATASOURCE_UID"
+            model:
+              expr: '(node_filesystem_avail_bytes{job="proxmox_nodes",mountpoint="/",fstype!="tmpfs"} / node_filesystem_size_bytes{job="proxmox_nodes",mountpoint="/",fstype!="tmpfs"}) * 100 < 10'
+              instant: true
+        condition: "A"
+        annotations:
+          description: "Root filesystem has less than 10% free space remaining"
+
+      - uid: "node_storage_io_delay"
+        title: "Proxmox Node - Storage IO Delay Bottleneck (>20%)"
+        for: "5m"
+        noDataState: OK
+        labels:
+          severity: warning
+          dc: production
+        data:
+          - refId: "A"
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "YOUR_DATASOURCE_UID"
+            model:
+              expr: 'rate(node_disk_io_time_seconds_total{job="proxmox_nodes"}[5m]) * 100 > 20'
+              instant: true
+        condition: "A"
+        annotations:
+          description: "Disk IO utilisation >20% — possible storage bottleneck"
+
+      - uid: "node_network_drops"
+        title: "Proxmox Node - Network Interface Drops Detected"
+        for: "5m"
+        noDataState: OK
+        labels:
+          severity: warning
+          dc: production
+        data:
+          - refId: "A"
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "YOUR_DATASOURCE_UID"
+            model:
+              expr: 'rate(node_network_receive_drop_total{job="proxmox_nodes",device!~"lo|veth.*|tap.*|fwbr.*|fwpr.*"}[5m]) > 0'
+              instant: true
+        condition: "A"
+        annotations:
+          description: "Network interface dropping packets — check switch/NIC health"
+
+      - uid: "vm_oom_kill"
+        title: "VM Guest - Out Of Memory (OOM) Kill Active"
+        for: "1m"
+        noDataState: OK
+        labels:
+          severity: critical
+          dc: production
+        data:
+          - refId: "A"
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "YOUR_DATASOURCE_UID"
+            model:
+              expr: 'rate(node_vmstat_oom_kill{job="proxmox_nodes"}[5m]) > 0'
+              instant: true
+        condition: "A"
+        annotations:
+          description: "OOM killer active — processes being killed due to memory exhaustion"
+
+      # ==========================================
+      # --- MEGARAID DISK HEALTH ---
+      # ==========================================
+      - uid: "megaraid_drive_offline"
+        title: "MegaRAID - Drive Offline"
+        for: "1m"
+        noDataState: OK
+        labels:
+          severity: critical
+          dc: production
+        data:
+          - refId: "A"
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "YOUR_DATASOURCE_UID"
+            model:
+              expr: 'megaraid_firmware_state == 0'
+              instant: true
+        condition: "A"
+        annotations:
+          description: "MegaRAID drive in slot {{ $labels.slot }} is offline"
+
+      - uid: "megaraid_reallocated_sectors"
+        title: "MegaRAID - Reallocated Sectors Detected"
+        for: "5m"
+        noDataState: OK
+        labels:
+          severity: warning
+          dc: production
+        data:
+          - refId: "A"
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "YOUR_DATASOURCE_UID"
+            model:
+              expr: 'megaraid_reallocated_sectors > 0'
+              instant: true
+        condition: "A"
+        annotations:
+          description: "MegaRAID drive in slot {{ $labels.slot }} has reallocated sectors — disk degrading"
+
+      - uid: "megaraid_pending_sectors"
+        title: "MegaRAID - Pending Sectors Detected"
+        for: "5m"
+        noDataState: OK
+        labels:
+          severity: warning
+          dc: production
+        data:
+          - refId: "A"
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "YOUR_DATASOURCE_UID"
+            model:
+              expr: 'megaraid_current_pending_sectors > 0'
+              instant: true
+        condition: "A"
+        annotations:
+          description: "MegaRAID drive in slot {{ $labels.slot }} has pending sectors"
+
+      - uid: "megaraid_media_errors"
+        title: "MegaRAID - Media Errors Detected"
+        for: "5m"
+        noDataState: OK
+        labels:
+          severity: critical
+          dc: production
+        data:
+          - refId: "A"
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "YOUR_DATASOURCE_UID"
+            model:
+              expr: 'megaraid_media_errors > 0'
+              instant: true
+        condition: "A"
+        annotations:
+          description: "MegaRAID drive in slot {{ $labels.slot }} has media errors — immediate attention required"
+
+      - uid: "megaraid_temperature"
+        title: "MegaRAID - Drive Temperature High (>45°C)"
+        for: "5m"
+        noDataState: OK
+        labels:
+          severity: warning
+          dc: production
+        data:
+          - refId: "A"
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "YOUR_DATASOURCE_UID"
+            model:
+              expr: 'megaraid_temperature_celsius > 45'
+              instant: true
+        condition: "A"
+        annotations:
+          description: "MegaRAID drive in slot {{ $labels.slot }} is running at high temperature"
+
+      - uid: "megaraid_collector_down"
+        title: "MegaRAID - Collector Script Failed"
+        for: "10m"
+        noDataState: OK
+        labels:
+          severity: warning
+          dc: production
+        data:
+          - refId: "A"
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "YOUR_DATASOURCE_UID"
+            model:
+              expr: 'megaraid_collector_success == 0'
+              instant: true
+        condition: "A"
+        annotations:
+          description: "MegaRAID textfile collector is failing — SMART data may be stale"

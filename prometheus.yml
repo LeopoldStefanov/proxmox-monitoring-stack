@@ -1,0 +1,115 @@
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+
+scrape_configs:
+
+  # Proxmox API metrics (VM states, storage pools, CPU/RAM per VM)
+  - job_name: "proxmox"
+    static_configs:
+      - targets:
+          - "proxmox-node-1:9221"
+          - "proxmox-node-2:9221"
+          - "proxmox-node-3:9221"
+    params:
+      target:
+        - "proxmox-node-1"   # maps to pve-exporter target param
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: proxmox_exporter:9221
+
+  # OS & hardware metrics per node (CPU, RAM, disk, network)
+  # On nodes with MegaRAID, also serves megaraid_* metrics via textfile collector
+  - job_name: "proxmox_nodes"
+    static_configs:
+      - targets:
+          - "proxmox-node-1:9100"
+          - "proxmox-node-2:9100"
+          - "proxmox-node-3:9100"
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: "([^:]+):.+"
+        target_label: node
+
+  # Disk SMART health (standard drives — SSDs, SCSI)
+  # Note: drives behind a MegaRAID controller are NOT visible here
+  # Use megaraid-prometheus-exporter for those
+  - job_name: "smartctl"
+    static_configs:
+      - targets:
+          - "proxmox-node-1:9633"
+          - "proxmox-node-2:9633"
+          - "proxmox-node-3:9633"
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: "([^:]+):.+"
+        target_label: node
+
+  # Firewall/gateway SNMP metrics (interface traffic, errors)
+  - job_name: "gateway_snmp"
+    static_configs:
+      - targets:
+          - "YOUR_GATEWAY_IP"
+    metrics_path: /snmp
+    params:
+      auth: [public_v2]
+      module: [if_mib]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: snmp_exporter:9116
+
+  # Blackbox probes — ICMP ping to gateway
+  - job_name: "blackbox_ping"
+    metrics_path: /probe
+    params:
+      module: [icmp]
+    static_configs:
+      - targets:
+          - "YOUR_GATEWAY_IP"
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox_exporter:9115
+
+  # Blackbox probes — TCP connect to gateway HTTPS
+  - job_name: "blackbox_tcp"
+    metrics_path: /probe
+    params:
+      module: [tcp_connect]
+    static_configs:
+      - targets:
+          - "YOUR_GATEWAY_IP:443"
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox_exporter:9115
+
+  # Blackbox probes — DNS resolution check
+  - job_name: "blackbox_dns"
+    metrics_path: /probe
+    params:
+      module: [dns_google]
+    static_configs:
+      - targets:
+          - "8.8.8.8"
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox_exporter:9115

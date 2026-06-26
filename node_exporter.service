@@ -1,0 +1,20 @@
+[Unit]
+Description=Prometheus Node Exporter
+After=network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/local/bin/node_exporter \
+  --collector.systemd \
+  --collector.cpu.info \
+  --collector.diskstats \
+  --collector.filesystem \
+  --collector.meminfo \
+  --collector.netstat \
+  --collector.thermal_zone \
+  --web.listen-address=:9100
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
